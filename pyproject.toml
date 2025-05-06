@@ -1,0 +1,17 @@
+[project]
+name = "openai-api-blueprint"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+openai-api-blueprint = "openai_api_blueprint:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
