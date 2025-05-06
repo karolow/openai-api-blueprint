@@ -11,3 +11,9 @@ wheels/
 
 # Docker
 .dockerignore
+
+# Environment variables
+.env
+
+# VSCode
+.vscode
