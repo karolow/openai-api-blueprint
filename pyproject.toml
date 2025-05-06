@@ -3,15 +3,29 @@ name = "openai-api-blueprint"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-authors = [
-    { name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }
-]
+authors = [{ name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi",
+    "pydantic-settings",
+    "pydantic",
+    "python-dotenv",
+    "uvicorn[standard]",
+]
 
-[project.scripts]
-openai-api-blueprint = "openai_api_blueprint:main"
+[tool.uv]
+dev-dependencies = ["pytest", "ruff"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+only-packages = true
+
+[project.scripts]
+openai-api-blueprint = "openai_api_blueprint:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
