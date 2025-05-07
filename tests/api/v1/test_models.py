@@ -5,7 +5,7 @@ Tests for the /v1/models API endpoints.
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from openai_api_blueprint.core.config import settings
+from openai_api_blueprint.core.config import TEST_TOKEN_PREFIX, settings
 
 
 def test_list_models_unauthorized(client: TestClient) -> None:
@@ -32,10 +32,14 @@ def test_list_models_invalid_token(client: TestClient) -> None:
     assert error_data["detail"]["error"]["code"] == "invalid_key"
 
 
+def get_valid_token() -> str:
+    """Return a valid token for testing."""
+    return settings.api_auth_tokens[0] if settings.api_auth_tokens else f"{TEST_TOKEN_PREFIX}key"
+
+
 def test_list_models_success(client: TestClient) -> None:
     """Test that the list_models endpoint returns 200 with valid token."""
-    # Use the first token from settings
-    token = settings.api_auth_tokens[0] if settings.api_auth_tokens else "test-token"
+    token = get_valid_token()
 
     response = client.get("/v1/models", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == status.HTTP_200_OK
@@ -58,8 +62,7 @@ def test_list_models_success(client: TestClient) -> None:
 
 def test_get_model_not_found(client: TestClient) -> None:
     """Test that the get_model endpoint returns 404 for nonexistent model."""
-    # Use the first token from settings
-    token = settings.api_auth_tokens[0] if settings.api_auth_tokens else "test-token"
+    token = get_valid_token()
 
     response = client.get(
         "/v1/models/nonexistent-model", headers={"Authorization": f"Bearer {token}"}
@@ -75,8 +78,7 @@ def test_get_model_not_found(client: TestClient) -> None:
 
 def test_get_model_success(client: TestClient) -> None:
     """Test that the get_model endpoint returns 200 for existing model."""
-    # Use the first token from settings
-    token = settings.api_auth_tokens[0] if settings.api_auth_tokens else "test-token"
+    token = get_valid_token()
 
     # First, get the list of models
     list_response = client.get("/v1/models", headers={"Authorization": f"Bearer {token}"})

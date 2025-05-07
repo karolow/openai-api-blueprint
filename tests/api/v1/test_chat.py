@@ -4,14 +4,15 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from openai_api_blueprint.core.config import settings
+from openai_api_blueprint.core.config import TEST_TOKEN_PREFIX, settings
 
 ENDPOINT = "/v1/chat/completions"
 
 
 @pytest.fixture
 def valid_token() -> str:
-    return settings.api_auth_tokens[0] if settings.api_auth_tokens else "test-token"
+    """Return a valid token for testing."""
+    return settings.api_auth_tokens[0] if settings.api_auth_tokens else f"{TEST_TOKEN_PREFIX}key"
 
 
 @pytest.fixture
