@@ -4,18 +4,19 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:${PORT:-8000}"
     volumes:
       - ./src:/app/src  # For hot-reloading during development
+      - ./pyproject.toml:/app/pyproject.toml  # Make project metadata available
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
     env_file:
       - .env
     # Override the default command to enable hot-reloading
-    command: uvicorn openai_api_blueprint.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "exec uvicorn openai_api_blueprint.main:app --host ${HOST:-0.0.0.0} --port ${PORT:-8000} --reload"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-8000}/health"]
       interval: 30s
       timeout: 5s
       retries: 3

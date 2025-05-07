@@ -4,13 +4,10 @@ An implementation of the OpenAI API interface for building compatible LLM API se
 
 ## Features
 
-- Drop-in compatible with existing OpenAI API clients
+- Drop-in compatible with existing OpenAI API clients for chat completion
 - Supports Chat Completions API
 - Streaming support (Server-Sent Events)
 - OpenAI-compatible authentication
-- Configurable model selection
-- Docker-ready
-- Comprehensive test suite
 
 ## Requirements
 
@@ -24,21 +21,68 @@ An implementation of the OpenAI API interface for building compatible LLM API se
 Create a `.env` file in the root directory with:
 
 ```
-# Authentication
-# Comma-separated list of valid API keys
-API_AUTH_TOKENS=your-test-token-1,your-test-token-2
+# Environment (development, test, staging, production)
+# Valid values: development, test, staging, production
+# Default: development
+ENVIRONMENT=development
 
-# Logging
+# Authentication
+# Comma-separated list of valid API keys (minimum 16 characters each)
+# REQUIRED FOR PRODUCTION/STAGING - application will fail to start if missing or invalid.
+# Auto-generated for 'development' (dev_ prefix) or 'test' (test_ prefix) if not provided.
+API_AUTH_TOKENS=your-production-token-12345678901234567890,another-token-12345678901234567890
+
+# Server Configuration
+# REQUIRED FOR PRODUCTION/STAGING
+HOST=0.0.0.0
+PORT=8000
 LOG_LEVEL=INFO
 
-# Rate Limiting
-RATE_LIMIT_PER_MINUTE=60 
+# CORS Settings (comma-separated domains, optional)
+# CORS_ORIGINS=http://localhost:3000,https://example.com
 
-# Optional - for connecting to actual LLM backends
-# OPENAI_API_KEY=your-openai-key
-# ANTHROPIC_API_KEY=your-anthropic-key
-# GOOGLE_API_KEY=your-google-key
+# Rate Limiting
+# REQUIRED FOR PRODUCTION/STAGING
+RATE_LIMIT_PER_MINUTE=10
 ```
+
+#### Production Configuration Requirements
+
+In production-like environments (`ENVIRONMENT=production` or `ENVIRONMENT=staging`), the application has strict configuration requirements enforced by Pydantic validation:
+
+1. The following environment variables are **required**, and the application will fail to start if any are missing or invalid (e.g., `PORT` not an integer):
+    *   `API_AUTH_TOKENS`: Must contain at least one token, each with a minimum of 16 characters.
+    *   `HOST`: Server host address.
+    *   `PORT`: Server port (must be a valid integer).
+    *   `LOG_LEVEL`: Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL).
+    *   `RATE_LIMIT_PER_MINUTE`: Request rate limit per minute (must be a valid integer).
+
+2. Project metadata (`project_name` and `project_version`) **must be available from `pyproject.toml`**. 
+    *   The application will fail to start in production/staging if `project_name` or `project_version` cannot be read from `pyproject.toml` or are empty.
+
+#### Development and Test Mode Behavior
+
+In `development` and `test` environments, the application is more permissive:
+
+1.  Missing or invalid values for `HOST`, `PORT`, `LOG_LEVEL`, `RATE_LIMIT_PER_MINUTE` will cause Pydantic validation errors and halt startup, but the error messages will indicate they are non-critical for these environments.
+2.  `API_AUTH_TOKENS`:
+    *   If `API_AUTH_TOKENS` is not provided or empty:
+        *   In `development` mode, a secure random token prefixed with `dev_` is automatically generated and used. A warning is logged.
+        *   In `test` mode, a fixed token `test_key` is used. A warning is logged.
+    *   If tokens are provided but are too short (less than 16 characters), a warning is logged, but the application will proceed with those tokens.
+
+#### Project Metadata
+
+The application automatically reads project name and version exclusively from the `pyproject.toml` file. 
+
+#### API Key Security
+
+- In development mode: If no tokens are provided via `API_AUTH_TOKENS`, a secure random token with the prefix `dev_` will be generated and a warning logged.
+- In test mode: If no tokens are provided, a consistent token `test_key` with the prefix `test_` is used and a warning logged.
+- In production/staging mode:
+    - You MUST provide strong API tokens (minimum 16 characters each) via the `API_AUTH_TOKENS` environment variable.
+    - The application will fail to start if tokens are missing or do not meet the length requirement.
+    - All tokens should be randomly generated, unique, and kept confidential.
 
 ### Local Development
 
@@ -122,7 +166,7 @@ pytest tests/api
 ```bash
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your-test-token-1" \
+  -H "Authorization: Bearer your-production-token-12345678901234567890" \
   -d '{
     "model": "blueprint-standard",
     "messages": [
@@ -139,7 +183,7 @@ curl http://localhost:8000/v1/chat/completions \
 ```bash
 curl http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your-test-token-1" \
+  -H "Authorization: Bearer your-production-token-12345678901234567890" \
   -d '{
     "model": "blueprint-standard",
     "messages": [

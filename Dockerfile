@@ -41,9 +41,18 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY --chown=appuser:appuser src/ /app/src/
+# Copy pyproject.toml for metadata
+COPY --chown=appuser:appuser pyproject.toml /app/
 
-# Expose port
-EXPOSE 8000
+# Set default values for HOST and PORT environment variables.
+# These will be used by the CMD if not overridden at runtime (e.g., via docker run -e).
+ENV HOST "0.0.0.0"
+ENV PORT "8000"
+ENV LOG_LEVEL "INFO"
+ENV RATE_LIMIT_PER_MINUTE "10" 
+
+# Expose port (default, can be overridden at runtime)
+EXPOSE ${PORT:-8000}
 
 # Set environment variables
 ENV PYTHONPATH=/app
@@ -55,9 +64,8 @@ ENV PYTHONUNBUFFERED=1
 # Switch to non-root user
 USER appuser
 
-# Simple health check that tests the API endpoint
+# Simple health check that will use configured values
 HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "openai_api_blueprint.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "exec uvicorn openai_api_blueprint.main:app --host \"${HOST}\" --port \"${PORT}\""]
