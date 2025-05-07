@@ -38,6 +38,9 @@ class Settings(BaseModel):
     # Security settings
     api_auth_tokens: list[str] = Field(default_factory=list)
 
+    # Rate limiting
+    rate_limit_per_minute: int = Field(default=int(os.getenv("RATE_LIMIT_PER_MINUTE", "5")))
+
     def __init__(self, **data: Any):
         super().__init__(**data)
 

@@ -8,7 +8,9 @@ specific model details.
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from openai_api_blueprint.core.config import settings
 from openai_api_blueprint.models.openai import Model, ModelList
@@ -16,24 +18,20 @@ from openai_api_blueprint.services import model_service
 
 logger = logging.getLogger(__name__)
 
+# Initialize rate limiter (shared for the app)
+limiter = Limiter(key_func=get_remote_address)
+
 # Create router without prefix - prefix will be added in the main router
 router = APIRouter()
 
 
-def get_api_key(authorization: str = Header(None)) -> str:
+def get_api_key(request: Request, authorization: str = Header(None)) -> str:
     """
     Extract and validate the API key from the Authorization header.
-
-    Args:
-        authorization: The Authorization header value
-
-    Returns:
-        str: The validated API key
-
-    Raises:
-        HTTPException: If the API key is missing or invalid
+    Logs repeated failures.
     """
     if not authorization:
+        logger.warning(f"Missing API key from IP: {get_remote_address(request)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={
@@ -49,6 +47,7 @@ def get_api_key(authorization: str = Header(None)) -> str:
     # Check for Bearer format
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
+        logger.warning(f"Invalid auth format from IP: {get_remote_address(request)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={
@@ -63,6 +62,7 @@ def get_api_key(authorization: str = Header(None)) -> str:
 
     token = parts[1]
     if not settings.api_auth_tokens or token not in settings.api_auth_tokens:
+        logger.warning(f"Invalid API key from IP: {get_remote_address(request)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail={
@@ -84,7 +84,10 @@ def get_api_key(authorization: str = Header(None)) -> str:
     summary="List models",
     description="Lists the currently available models, and provides basic information about each one such as the owner and availability.",
 )
-async def list_models_endpoint(api_key: Annotated[str, Depends(get_api_key)]) -> ModelList:
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")  # type: ignore
+async def list_models_endpoint(
+    request: Request, api_key: Annotated[str, Depends(get_api_key)]
+) -> ModelList:
     """
     List available models.
 
@@ -104,7 +107,10 @@ async def list_models_endpoint(api_key: Annotated[str, Depends(get_api_key)]) ->
     summary="Retrieve model",
     description="Retrieves a model instance, providing basic information about it such as the owner and availability.",
 )
-async def get_model_endpoint(model_id: str, api_key: Annotated[str, Depends(get_api_key)]) -> Model:
+@limiter.limit(f"{settings.rate_limit_per_minute}/minute")  # type: ignore
+async def get_model_endpoint(
+    request: Request, model_id: str, api_key: Annotated[str, Depends(get_api_key)]
+) -> Model:
     """
     Get a specific model by ID.
 
