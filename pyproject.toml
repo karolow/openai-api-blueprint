@@ -1,17 +1,73 @@
 [project]
 name = "openai-api-blueprint"
 version = "0.1.0"
-description = "Add your description here"
+description = "Template for creating OpenAI-compatible APIs"
 readme = "README.md"
-authors = [
-    { name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }
-]
+authors = [{ name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }]
+license = { text = "MIT" }
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi>=0.110.0",
+    "httpx>=0.28.1",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "pytest-asyncio>=0.26.0",
+    "pytest-fastapi>=0.1.0",
+    "python-dotenv>=1.0.0",
+    "slowapi>=0.1.9",
+    "uvicorn[standard]>=0.25.0",
+]
 
-[project.scripts]
-openai-api-blueprint = "openai_api_blueprint:main"
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.4",
+    "pytest-asyncio>=0.23.6",
+    "httpx>=0.26.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openai_api_blueprint"]
+
+[tool.hatch.build]
+only-packages = true
+
+[project.scripts]
+openai-api-blueprint = "openai_api_blueprint:main"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["ARG001"]
+
+[tool.mypy]
+python_version = "3.13"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+warn_unreachable = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+asyncio_mode = "auto"
