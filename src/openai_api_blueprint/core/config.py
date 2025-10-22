@@ -11,7 +11,7 @@ import sys
 import tomllib
 from enum import Enum
 from pathlib import Path
-from typing import Any, List, Self
+from typing import Any, Self
 
 from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, Field, ValidationError, model_validator
@@ -86,14 +86,16 @@ class Settings(BaseModel):
     log_level: str
 
     # Project metadata (sourced exclusively from pyproject.toml)
-    project_name: str = Field(default_factory=lambda: project_metadata_loaded.get("name", ""))
+    project_name: str = Field(
+        default_factory=lambda: os.getenv("PROJECT_NAME") or project_metadata_loaded.get("name", "") or "OpenAI Compatible API"
+    )
     project_version: str = Field(default_factory=lambda: project_metadata_loaded.get("version", ""))
 
     # Security settings
-    api_auth_tokens: List[str] = Field(default_factory=list)
+    api_auth_tokens: list[str] = Field(default_factory=list)
 
     # CORS settings
-    cors_origins: List[str] = Field(default_factory=list)
+    cors_origins: list[str] = Field(default_factory=list)
 
     # Rate limiting (required, Pydantic will raise ValidationError if missing/invalid)
     rate_limit_per_minute: int
@@ -108,10 +110,8 @@ class Settings(BaseModel):
 
         if not current_tokens:
             if is_prod_or_staging:
-                raise ValueError(
-                    f"No API authentication tokens configured in {self.environment.value} environment."
-                )
-            elif self.environment == Environment.DEVELOPMENT:
+                raise ValueError(f"No API authentication tokens configured in {self.environment.value} environment.")
+            if self.environment == Environment.DEVELOPMENT:
                 dev_token = f"{DEV_TOKEN_PREFIX}{secrets.token_urlsafe(16)}"
                 current_tokens = [dev_token]
                 logger.warning(
@@ -121,18 +121,14 @@ class Settings(BaseModel):
             elif self.environment == Environment.TEST:
                 test_token = f"{TEST_TOKEN_PREFIX}key"
                 current_tokens = [test_token]
-                logger.warning(
-                    "TESTING: Using fixed test token for testing environment. "
-                    "This would not be allowed in production."
-                )
+                logger.warning("TESTING: Using fixed test token for testing environment. This would not be allowed in production.")
 
         for token in current_tokens:
             if len(token) < MIN_TOKEN_LENGTH:
                 msg = f"API token is too short (less than {MIN_TOKEN_LENGTH} characters): '{token[:10]}...'"
                 if is_prod_or_staging:
                     raise ValueError(f"{msg}. This is a security risk in production.")
-                else:
-                    logger.warning(f"{msg}. This would be rejected in production.")
+                logger.warning(f"{msg}. This would be rejected in production.")
             validated_tokens.append(token)
 
         self.api_auth_tokens = validated_tokens
@@ -140,13 +136,10 @@ class Settings(BaseModel):
         # Validate project metadata (sourced from pyproject.toml) in production/staging
         if is_prod_or_staging:
             if not self.project_name:
-                raise ValueError(
-                    "PROJECT_NAME must be available from pyproject.toml in production/staging environments."
-                )
+                logger.warning("PROJECT_NAME not set, using default API title")
+                self.project_name = "OpenAI Compatible API"
             if not self.project_version:
-                raise ValueError(
-                    "PROJECT_VERSION must be available from pyproject.toml in production/staging environments."
-                )
+                raise ValueError("PROJECT_VERSION must be available from pyproject.toml in production/staging environments.")
         return self
 
 
@@ -156,9 +149,7 @@ try:
     try:
         environment_parsed = Environment(env_value_raw.strip().lower())
     except ValueError:
-        logger.warning(
-            f"Invalid ENVIRONMENT value: '{env_value_raw}'. Defaulting to '{Environment.DEVELOPMENT.value}'."
-        )
+        logger.warning(f"Invalid ENVIRONMENT value: '{env_value_raw}'. Defaulting to '{Environment.DEVELOPMENT.value}'.")
         environment_parsed = Environment.DEVELOPMENT
 
     # Collect settings from environment variables.
@@ -168,12 +159,8 @@ try:
         "host": os.getenv("HOST"),
         "port": os.getenv("PORT"),
         "log_level": os.getenv("LOG_LEVEL"),
-        "api_auth_tokens": [
-            token.strip() for token in os.getenv("API_AUTH_TOKENS", "").split(",") if token.strip()
-        ],
-        "cors_origins": [
-            origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()
-        ],
+        "api_auth_tokens": [token.strip() for token in os.getenv("API_AUTH_TOKENS", "").split(",") if token.strip()],
+        "cors_origins": [origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()],
         "rate_limit_per_minute": os.getenv("RATE_LIMIT_PER_MINUTE"),
     }
 
@@ -184,47 +171,32 @@ try:
     logger.info(f"Settings loaded successfully for {settings.environment.value} environment.")
 
 except ValidationError as e:
-    env_for_error_handling_raw = (
-        os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
-    )
+    env_for_error_handling_raw = os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
     is_prod_or_staging_for_error = env_for_error_handling_raw in (
         Environment.PRODUCTION.value,
         Environment.STAGING.value,
     )
 
     if is_prod_or_staging_for_error:
-        logger.critical(
-            f"FATAL: Settings validation failed in '{env_for_error_handling_raw}' environment. "
-            f"Pydantic error: {e}"
-        )
+        logger.critical(f"FATAL: Settings validation failed in '{env_for_error_handling_raw}' environment. Pydantic error: {e}")
         sys.exit(1)
     else:
-        logger.error(
-            f"Settings validation error (non-critical in '{env_for_error_handling_raw}' environment): {e}"
-        )
+        logger.error(f"Settings validation error (non-critical in '{env_for_error_handling_raw}' environment): {e}")
         raise
 except ValueError as e:  # Catches errors from _validate_settings_post_init
-    env_for_error_handling_raw = (
-        os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
-    )
+    env_for_error_handling_raw = os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
     is_prod_or_staging_for_error = env_for_error_handling_raw in (
         Environment.PRODUCTION.value,
         Environment.STAGING.value,
     )
     if is_prod_or_staging_for_error:
-        logger.critical(
-            f"FATAL: Critical configuration error in '{env_for_error_handling_raw}' environment: {e}"
-        )
+        logger.critical(f"FATAL: Critical configuration error in '{env_for_error_handling_raw}' environment: {e}")
         sys.exit(1)
     else:
-        logger.error(
-            f"Configuration error (non-critical in '{env_for_error_handling_raw}' environment): {e}"
-        )
+        logger.error(f"Configuration error (non-critical in '{env_for_error_handling_raw}' environment): {e}")
         raise
 except Exception as e:
-    env_for_error_handling_raw = (
-        os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
-    )
+    env_for_error_handling_raw = os.getenv("ENVIRONMENT", Environment.DEVELOPMENT.value).strip().lower()
     is_prod_or_staging_for_error = env_for_error_handling_raw in (
         Environment.PRODUCTION.value,
         Environment.STAGING.value,
