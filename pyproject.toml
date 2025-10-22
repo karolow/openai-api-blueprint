@@ -1,30 +1,29 @@
 [project]
 name = "openai-api-blueprint"
-version = "0.1.0"
+version = "0.1.1"
 description = "Template for creating OpenAI-compatible APIs"
 readme = "README.md"
 authors = [{ name = "Karol Piekarski", email = "karol.piekarski@gmail.com" }]
 license = { text = "MIT" }
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.110.0",
-    "httpx>=0.28.1",
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.1.0",
-    "pytest-asyncio>=0.26.0",
-    "pytest-fastapi>=0.1.0",
-    "python-dotenv>=1.0.0",
-    "slowapi>=0.1.9",
-    "uvicorn[standard]>=0.25.0",
+    "fastapi>=0.119.1,<1.0.0",
+    "httpx>=0.28.1,<1.0.0",
+    "pydantic>=2.12.3,<3.0.0",
+    "pydantic-settings>=2.11.0,<3.0.0",
+    "python-dotenv>=1.1.1,<2.0.0",
+    "slowapi>=0.1.9,<0.2.0",
+    "uvicorn[standard]>=0.38.0,<1.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.4",
-    "pytest-asyncio>=0.23.6",
-    "httpx>=0.26.0",
-    "ruff>=0.2.0",
-    "mypy>=1.8.0",
+    "pytest>=8.4.2,<9.0.0",
+    "pytest-asyncio>=0.26.0,<1.0.0",
+    "pytest-fastapi>=0.1.0,<0.2.0",
+    "httpx>=0.28.1,<1.0.0",
+    "ruff>=0.14.1,<1.0.0",
+    "mypy>=1.18.2,<2.0.0",
 ]
 
 [build-system]
@@ -71,3 +70,4 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
