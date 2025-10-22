@@ -16,29 +16,25 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.13"
-        cache: "uv"
 
     - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
 
     - name: Install dependencies
-      run: |
-        uv pip install -e ".[dev]"
+      run: uv sync --all-extras
 
     - name: Lint with ruff
       run: |
-        ruff check .
-        ruff format . --check
+        uv run ruff check .
+        uv run ruff format . --check
 
     - name: Type-check with mypy
-      run: |
-        mypy src tests
+      run: uv run mypy src tests
 
     - name: Test with pytest
-      run: |
-        pytest -v
+      run: uv run pytest -v
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
