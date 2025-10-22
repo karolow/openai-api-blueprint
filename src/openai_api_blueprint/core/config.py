@@ -89,7 +89,9 @@ class Settings(BaseModel):
     project_name: str = Field(
         default_factory=lambda: os.getenv("PROJECT_NAME") or project_metadata_loaded.get("name", "") or "OpenAI Compatible API"
     )
-    project_version: str = Field(default_factory=lambda: project_metadata_loaded.get("version", ""))
+    project_version: str = Field(
+        default_factory=lambda: os.getenv("PROJECT_VERSION") or project_metadata_loaded.get("version", "") or "0.0.0"
+    )
 
     # Security settings
     api_auth_tokens: list[str] = Field(default_factory=list)
@@ -139,7 +141,8 @@ class Settings(BaseModel):
                 logger.warning("PROJECT_NAME not set, using default API title")
                 self.project_name = "OpenAI Compatible API"
             if not self.project_version:
-                raise ValueError("PROJECT_VERSION must be available from pyproject.toml in production/staging environments.")
+                logger.warning("PROJECT_VERSION not set, using default version")
+                self.project_version = "0.0.0"
         return self
 
 
